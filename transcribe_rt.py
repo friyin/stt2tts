@@ -1,4 +1,4 @@
-#! python3.7
+#!/usr/bin/env python
 
 import argparse
 import io
@@ -10,6 +10,14 @@ import torch
 import time
 import tempfile
 import subprocess
+import re
+import num2words
+
+try:
+    import winsound
+except ImportError:
+    winsound = None
+    from playsound import playsound
 
 from datetime import datetime, timedelta
 from queue import Queue
@@ -35,37 +43,54 @@ def rewrite(path, data):
         for l in data:
             f.write(l)
             f.write(os.linesep)
-        
 
-def init_tts(base_model_dir, device):
+
+def remove_dots_between_numbers(input_string):
+    # Define a regular expression pattern to match dots between numbers
+    pattern = r'(\d+)\.(\d+)'
+
+    # Define a function to replace dots with an empty string for matched patterns
+    def replace_dots(match):
+        return match.group(1) + match.group(2)
+
+    # Use re.sub() to apply the replacement function to the input string
+    result_string = re.sub(pattern, replace_dots, input_string)
+
+    return result_string
+
+
+def convert_num_to_words(input_text, lang):
+    utterance = remove_dots_between_numbers(input_text)
+    utterance = ' '.join([num2words.num2words(i, lang=lang) if i.isdigit() else i for i in utterance.split()])
+    return utterance
+
+
+def init_tts(args):
         # Late-import to make things load faster
         from TTS.api import TTS
         from TTS.utils.manage import ModelManager
         from TTS.utils.synthesizer import Synthesizer
 
-        # load models
-        synthesizer = Synthesizer(
-            os.path.join(base_model_dir,'best_model.pth'),
-            os.path.join(base_model_dir,'config.json'),
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-        ).to(device)
+        tts = TTS(model_name=args.tts_model_name, progress_bar=True).to(args.device)
 
-        return synthesizer
+        return tts
+
+        ## load models
+        #synthesizer = Synthesizer(
+        #    model_name=args.tts_model_name,
+        #    speaker_wav=args.speaker_wav,
+        #    model_path=args.tts_model_path,
+        #    model_config=args.tts_model_config,
+        #    language_name=args.language
+        #).to(args.device)
+
+        #return synthesizer
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model", default="medium", help="Model to use",
+    parser.add_argument("--model", default="large-v2", help="Model to use",
                         choices=["tiny", "base", "small", "medium", "large", "large-v1", "large-v2", "large-v3"])
-    parser.add_argument("--non_english", action='store_true',
+    parser.add_argument("--non_english", action='store_true', default=True,
                         help="Don't use the english model.")
     parser.add_argument("--energy_threshold", default=1000,
                         help="Energy level for mic to detect.", type=int)
@@ -74,13 +99,25 @@ def main():
     parser.add_argument("--phrase_timeout", default=3,
                         help="How much empty space between recordings before we "
                              "consider it a new line in the transcription.", type=float)  
+    parser.add_argument("--tts_model_name", default=None,
+                        help="TTS model name", type=str)
     parser.add_argument("--tts_model_path", default=None,
                         help="Path to TTS model", type=str)
+    parser.add_argument("--tts_model_config", default=None,
+                        help="Path to TTS config", type=str)
+    parser.add_argument("--language", default=None,
+                        help="Language", type=str)
+
     parser.add_argument("--output_file", default=None,
                         help="Output text to file.", type=str)
     parser.add_argument("--device", default="cuda",
                         help="CUDA or cpu", type=str)
-                        
+    parser.add_argument(
+        "--speaker_wav",
+        nargs="+",
+        help="wav file(s) to condition a multi-speaker TTS model with a Speaker Encoder. You can give multiple file paths. The d_vectors is computed as their average.",
+        default=None,
+    )       
 
 
     if 'linux' in platform:
@@ -97,6 +134,7 @@ def main():
     data_queue = Queue()
     # We use SpeechRecognizer to record our audio because it has a nice feauture where it can detect when speech ends.
     recorder = sr.Recognizer()
+    recorder.pause_threshold = 2
     recorder.energy_threshold = args.energy_threshold
     # Definitely do this, dynamic energy compensation lowers the energy threshold dramtically to a point where the SpeechRecognizer never stops recording.
     recorder.dynamic_energy_threshold = False
@@ -111,10 +149,10 @@ def main():
     #audio_model = WhisperModel(model, device="cuda")
 
     print("Initializing TTS model")
-    if(args.tts_model_path):
-        synthesizer = init_tts(args.tts_model_path, args.device)
-    else:
-        synthesizer = None
+    #if(args.tts_model_path):
+    synthesizer = init_tts(args)
+    #else:
+    #    synthesizer = None
 
     record_timeout = args.record_timeout
     phrase_timeout = args.phrase_timeout
@@ -139,7 +177,7 @@ def main():
     # Create a background thread that will pass us raw audio bytes.
     # We could do this manually but SpeechRecognizer provides a nice helper.
     #recorder.listen_in_background(source, record_callback, phrase_time_limit=record_timeout)
-    recorder.listen_in_background(source, record_callback)
+    listen_stop = recorder.listen_in_background(source, record_callback)
 
     # Cue the user that we're ready to go.
     cls()
@@ -181,7 +219,8 @@ def main():
             #result = audio_model.transcribe(temp_file, fp16=torch.cuda.is_available())
             #segments, info = audio_model.transcribe(temp_file, beam_size=5)
             tstart = time.time()
-            segments, info = audio_model.transcribe(temp_file, beam_size=5, language="es")
+            print(" *** TRANSCRIBIENDO VOZ")
+            segments, info = audio_model.transcribe(temp_file, beam_size=5, language=args.language)
             #segments, info = audio_model.transcribe(temp_file, beam_size=5, vad_filter=True, vad_parameters=dict(min_silence_duration_ms=500))
             tend = time.time()
             ttrans = tend - tstart
@@ -196,14 +235,34 @@ def main():
             #else:
             #    ##transcription[-1] = text
             #    transcription[-1] = text
-            if text.strip():
+            text=text.strip()
+            if text:
                 print(f" *** {datetime.now()}: phrase_complete {phrase_complete} lines {len(transcription)} infer_time {ttrans:.3f}s")
+                print(f" *** Text: {text}")
+                text_final = convert_num_to_words(text, args.language)
+                print(f" *** Text without numbers: {text_final}")
                 #transcription.append(text)
-                with tempfile.TemporaryDirectory() as tmpdirname:
-                    wav = synthesizer.tts(text)
-                    tmpfilename = os.path.join(tmpdirname, "temp.wav")
-                    synthesizer.save_wav(wav, tmpfilename, pipe_out=False)
-                    subprocess.call(["cvlc", tmpfilename])
+                if synthesizer:
+                    print(" *** SINTETIZANDO VOZ")
+                    listen_stop()
+                    with tempfile.TemporaryDirectory() as tmpdirname:
+                        #wav = synthesizer.tts(text)
+                        tmpfilename = os.path.join(tmpdirname, "temp.wav")
+
+                        # Generating wav...
+                        
+                        synthesizer.tts_to_file(text_final, speaker_wav=args.speaker_wav, language=args.language, file_path=tmpfilename, split_sentences=False)
+                        #synthesizer.tts_with_vc_to_file(text_final, speaker_wav=args.speaker_wav, language=args.language, file_path=tmpfilename, split_sentences=False)
+
+                        # Playing sound...
+                        #synthesizer.save_wav(wav, tmpfilename, pipe_out=False)
+                        if winsound:
+                            winsound.PlaySound(tmpfilename, winsound.SND_FILENAME)
+                        else:
+                            playsound(tmpfilename)
+                    listen_stop = recorder.listen_in_background(source, record_callback)
+                    print(" *** ESCUCHANDO")
+                    
 
             # Clear the console to reprint the updated transcription.
         except KeyboardInterrupt:
@@ -214,3 +273,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
