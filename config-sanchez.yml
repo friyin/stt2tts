@@ -2,12 +2,12 @@ xtts_model_path: models/xtts/psanchez
 xtts_model_config: models/xtts/psanchez/config.json
 xtts_speaker_wav: models/xtts/psanchez/reference.wav
 xtts_model_temperature: 0.75
-xtts_length_penalty: 1.0
-xtts_repetition_penalty: 5.0
+xtts_length_penalty: 1.75
+xtts_repetition_penalty: 5.5
 xtts_top_k: 50
 xtts_top_p: 0.85
 xtts_speed: 1.0
-xtts_num_beams: 1
+xtts_num_beams: 3
 language: es
 rvc_model_pth: models/rvc/psanchez/rvc_model.pth
 rvc_model_index: models/rvc/psanchez/psanchez.index
@@ -20,4 +20,4 @@ record_timeout: 2
 phrase_timeout: 3
 pause_threshold: 2
 device: cuda
-output_file: None
+output_file: ""

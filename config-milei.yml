@@ -7,7 +7,7 @@ xtts_repetition_penalty: 5.0
 xtts_top_k: 50
 xtts_top_p: 0.85
 xtts_speed: 1.0
-xtts_num_beams: 1
+xtts_num_beams: 3
 language: es
 rvc_model_pth: models/rvc/milei/rvc_model.pth
 rvc_model_index: models/rvc/milei/rvc_model.index

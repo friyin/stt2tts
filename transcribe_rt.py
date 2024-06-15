@@ -169,6 +169,7 @@ def sendsound_out(filepath):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="config.yml", help="Config file")
+    parser.add_argument("--rvc", action='store_true', default=False, help="Use RVC")
 
     #parser.add_argument("--model", default="large-v2", help="Model to use",
     #                    choices=["tiny", "base", "small", "medium", "large", "large-v1", "large-v2", "large-v3"])
@@ -235,7 +236,7 @@ def main():
     
     #if(args.tts_model_path):
     synthesizer = init_tts(config)
-    if config['rvc_model_pth']:
+    if args.rvc and config['rvc_model_pth']:
         rvc_model, hubert_model = init_rvc(config)
     else:
         rvc_model, hubert_model = None, None
@@ -274,7 +275,7 @@ def main():
     if config['output_file']:
         print(f"Output file: {config['output_file']}")
 
-    print(f"{datetime.now()}: PROCESANDO")
+    print(f"{datetime.now()}: PROCESANDO: RVC: {'ENABLED' if rvc_model else 'DISABLED'}")
 
     while True:
         try:
