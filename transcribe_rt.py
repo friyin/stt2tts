@@ -6,15 +6,14 @@ import os
 os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 
 import speech_recognition as sr
-import torch
 import time
 import tempfile
-import subprocess
 import re
 import num2words
 
 try:
     import winsound
+    playsound = None
 except ImportError:
     winsound = None
     from playsound import playsound
