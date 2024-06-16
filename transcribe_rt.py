@@ -70,7 +70,7 @@ def convert_num_to_words(input_text, lang):
 
 
 def init_tts(config):
-        print("Initializing TTS model")
+        print(f"{datetime.now()}: Initializing TTS model")
         # Late-import to make things load faster
         from TTS.api import TTS
         from TTS.utils.manage import ModelManager
@@ -96,15 +96,15 @@ def init_tts(config):
 
 
 def init_rvc(config):
-    print("Initializing RVC model")
+    print(f"{datetime.now()}: Initializing RVC model")
     rvc=config['rvc_model_pth']
     modelname = os.path.splitext(rvc)[0]
-    print("Using RVC model: "+ modelname)
+    print(f"{datetime.now()}: Using RVC model: {modelname}")
     rvc_model_path = config['rvc_model_pth']
     rvc_index_path = config['rvc_model_index']
 
-    if rvc_index_path != "" :
-        print("Index file found!")
+    if rvc_index_path and os.path.exists(rvc_index_path):
+        print(f"{datetime.now()}: Index file found: {rvc_index_path}")
 
     #load_cpt(modelname, rvc_model_path)
     #cpt, version, net_g, tgt_sr, vc = get_vc(device, config.is_half, config, rvc_model_path)
@@ -156,7 +156,7 @@ def voice_change(rvc_data, pitch_change, index_rate):
         vc=rvc_data.vc, 
         hubert_model=hubert_model
     )
-    gc.collect()
+    #gc.collect()
 
 def sendsound_out(filepath):
     # Playing sound...
@@ -310,8 +310,8 @@ def main():
             #result = audio_model.transcribe(temp_file, fp16=torch.cuda.is_available())
             #segments, info = audio_model.transcribe(temp_file, beam_size=5)
             tstart = time.time()
-            print(" *** TRANSCRIBIENDO VOZ")
-            segments, info = audio_model.transcribe(temp_file, beam_size=5, language=config['language'])
+            print(f"{datetime.now()}: TRANSCRIBIENDO VOZ")
+            segments, info = audio_model.transcribe(temp_file, beam_size=config['whisper_beam_size'], language=config['language'])
             #segments, info = audio_model.transcribe(temp_file, beam_size=5, vad_filter=True, vad_parameters=dict(min_silence_duration_ms=500))
             tend = time.time()
             ttrans = tend - tstart
@@ -327,6 +327,10 @@ def main():
             #    ##transcription[-1] = text
             #    transcription[-1] = text
             text=text.strip()
+            if text=="¡Gracias por ver el vídeo!":
+                print(f"{datetime.now()}: transcripción inválida...")
+                continue
+
             if text:
                 print(f" *** {datetime.now()}: phrase_complete {phrase_complete} lines {len(transcription)} infer_time {ttrans:.3f}s")
                 print(f" *** Text: {text}")

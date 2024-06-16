@@ -132,6 +132,7 @@ def get_vc(device, is_half, config, model_path):
 
 
 def rvc_infer(index_path, index_rate, input_path, output_path, pitch_change, f0_method, cpt, version, net_g, filter_radius, tgt_sr, rms_mix_rate, protect, crepe_hop_length, vc, hubert_model):
+    #audio, sr = librosa.load(input_path, sr=16000, dtype=np.float32,)
     audio, sr = librosa.load(input_path, sr=16000, dtype=np.float32,)
     times = [0, 0, 0]
     if_f0 = cpt.get('f0', 1)
