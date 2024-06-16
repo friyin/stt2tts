@@ -14,7 +14,7 @@ import yaml
 from rvc import Config, load_hubert, get_vc, rvc_infer
 import gc
 import torch
-
+from pydub import AudioSegment
 
 try:
     import winsound
@@ -261,6 +261,7 @@ def main():
         audio: An AudioData containing the recorded bytes.
         """
         # Grab the raw bytes and push it into the thread safe queue.
+        print(f"{datetime.now()}: ADQUIRIENDO AUDIO")
         data = audio.get_raw_data()
         data_queue.put(data)
 
@@ -335,6 +336,8 @@ def main():
                 print(f" *** {datetime.now()}: phrase_complete {phrase_complete} lines {len(transcription)} infer_time {ttrans:.3f}s")
                 print(f" *** Text: {text}")
                 text_final = convert_num_to_words(text, config['language'])
+                if text_final[-1]!='.':
+                    text_final = text_final + "."
                 print(f" *** Text without numbers: {text_final}")
                 #transcription.append(text)
                 if synthesizer:
@@ -358,8 +361,16 @@ def main():
                             top_p=config['xtts_top_p'],
                             num_beams=config['xtts_num_beams'],
                             speed=config['xtts_speed'])
-                        
 
+                        xtts_trim = config['xtts_trim']
+                        if xtts_trim:
+                            print(f"{datetime.now()}: RECORTANDO VOZ: {xtts_trim} ms")
+                            audio_obj = AudioSegment.from_file(tmpfilename_synth)
+                            audio_obj = audio_obj[:-xtts_trim]
+                            #audio_obj.export(tmpfilename_synth, format="wav")
+                            audio_obj.export(tmpfilename_synth)
+
+                    
 
                         if rvc_model:
                             print(f"{datetime.now()}: CAMBIANDO TIMBRE DE VOZ")
