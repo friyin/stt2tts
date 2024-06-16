@@ -327,7 +327,7 @@ def main():
             #    ##transcription[-1] = text
             #    transcription[-1] = text
             text=text.strip()
-            if text.lower in ("¡gracias por ver el vídeo!", "¡suscríbete al canal!"):
+            if text.lower() in ("¡gracias por ver el vídeo!", "¡suscríbete al canal!"):
                 print(f"{datetime.now()}: transcripción inválida...")
                 continue
 
