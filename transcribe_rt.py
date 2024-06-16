@@ -339,12 +339,10 @@ def main():
                 if text_final[-1]!='.':
                     text_final = text_final + "."
                 print(f" *** Text without numbers: {text_final}")
-                #transcription.append(text)
                 if synthesizer:
                     print(f"{datetime.now()}: PARANDO ESCUCHA")
                     listen_stop()
                     with tempfile.TemporaryDirectory() as tmpdirname_synth:
-                        #wav = synthesizer.tts(text)
                         tmpfilename_synth = os.path.join(tmpdirname_synth, "synth.wav")
 
                         # Generating wav...
@@ -353,7 +351,7 @@ def main():
                             speaker_wav=config['xtts_speaker_wav'], 
                             language=config['language'], 
                             file_path=tmpfilename_synth,
-                            split_sentences=False,
+                            split_sentences=True,
                             temperature=config['xtts_model_temperature'],
                             length_penalty=config['xtts_length_penalty'],
                             repetition_penalty=config['xtts_repetition_penalty'],
@@ -368,9 +366,8 @@ def main():
                             audio_obj = AudioSegment.from_file(tmpfilename_synth)
                             audio_obj = audio_obj[:-xtts_trim]
                             #audio_obj.export(tmpfilename_synth, format="wav")
-                            audio_obj.export(tmpfilename_synth)
-
-                    
+                            _obj = audio_obj.export(tmpfilename_synth)
+                            _obj.close()
 
                         if rvc_model:
                             print(f"{datetime.now()}: CAMBIANDO TIMBRE DE VOZ")
