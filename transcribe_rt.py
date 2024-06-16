@@ -327,7 +327,7 @@ def main():
             #    ##transcription[-1] = text
             #    transcription[-1] = text
             text=text.strip()
-            if text=="¡Gracias por ver el vídeo!":
+            if text.lower in ("¡gracias por ver el vídeo!", "¡suscríbete al canal!"):
                 print(f"{datetime.now()}: transcripción inválida...")
                 continue
 
@@ -358,6 +358,8 @@ def main():
                             top_p=config['xtts_top_p'],
                             num_beams=config['xtts_num_beams'],
                             speed=config['xtts_speed'])
+                        
+
 
                         if rvc_model:
                             print(f"{datetime.now()}: CAMBIANDO TIMBRE DE VOZ")
@@ -367,7 +369,7 @@ def main():
 
                                 # Generating wav...
                                 rvc_infer(
-                                    index_path=config['rvc_model_pth'],
+                                    index_path=config['rvc_model_index'],
                                     index_rate=config['rvc_index_rate'],
                                     input_path=tmpfilename_synth,
                                     output_path=tmpfilename_rvc,
